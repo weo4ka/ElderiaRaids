@@ -1,0 +1,10 @@
+main: com.weo4ka.elderiaraids.ElderiaRaids
+version: 1.0.0
+name: ElderiaRaids
+author: weo4ka
+description: Плагин на рейды специально для сервера Elderia
+api-version: 1.21
+
+depend: [MythicMobs]
+
+soft-depend: [PlaceholderAPI]
