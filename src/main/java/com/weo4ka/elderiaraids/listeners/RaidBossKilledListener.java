@@ -2,20 +2,32 @@ package com.weo4ka.elderiaraids.listeners;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import com.weo4ka.elderiaraids.ElderiaRaids;
+
+import com.weo4ka.elderiaraids.managers.RaidManager;
+import com.weo4ka.elderiaraids.utils.RaidData;
+
 import io.lumine.mythic.bukkit.events.MythicMobDeathEvent;
 
 public class RaidBossKilledListener implements Listener{
 
+    private final RaidManager manager;
+
+    public RaidBossKilledListener(RaidManager manager) {
+        this.manager = manager;
+    }
+
     @EventHandler 
     public void BossKilled(MythicMobDeathEvent event) {
-        if (event.getKiller().getWorld().getName() != ElderiaRaids.raid_world_name) {
+        RaidData data = manager.getNextRaidData();
+        if (event.getKiller().getWorld().getName() != data.getRaidWorldName()) {
             return;
         }
 
-        if (event.getMobType().getInternalName() != ElderiaRaids.next_boss_id) {
+        if (event.getMobType().getInternalName() != data.getBossId()) {
             return;
         }
         
+        manager.setCooldown(data.getBossCooldown());
+        manager.rollNextBoss();
     }
 }
