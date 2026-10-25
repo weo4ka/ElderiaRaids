@@ -17,7 +17,7 @@ public class RaidBossKilledListener implements Listener{
     }
 
     @EventHandler 
-    public void BossKilled(MythicMobDeathEvent event) {
+    public void onBossKilled(MythicMobDeathEvent event) {
         RaidData data = manager.getNextRaidData();
         if (event.getKiller().getWorld().getName() != data.getRaidWorldName()) {
             return;

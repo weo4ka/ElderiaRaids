@@ -2,8 +2,11 @@ package com.weo4ka.elderiaraids.managers;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import com.weo4ka.elderiaraids.ElderiaRaids;
@@ -12,6 +15,7 @@ import com.weo4ka.elderiaraids.utils.RaidData;
 public class RaidManager {
     private long cooldown;
     private RaidData currentRaidData;
+    private Map<String, RaidData> registeredBosses = new HashMap<>();
 
     private final ElderiaRaids plugin;
     private final File file;
@@ -20,6 +24,7 @@ public class RaidManager {
 
     public RaidManager(ElderiaRaids plugin) {
         this.plugin = plugin;
+        loadRaidConfig();
 
         this.file = new File(plugin.getDataFolder(), "data.yml");
 
@@ -33,7 +38,7 @@ public class RaidManager {
         String currentBossId = this.config.getString("global-raid-data.next-boss");
 
         if (currentBossId != null || currentBossId != "") {
-            this.currentRaidData = plugin.getRaidDataByKey(currentBossId);
+            this.currentRaidData = getRaidDataByKey(currentBossId);
         }
     }
 
@@ -42,31 +47,35 @@ public class RaidManager {
 
         config.set("global-raid-data.cooldown", this.cooldown);
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                config.save(file);
-            } catch (Exception e) {
-                plugin.getLogger().severe("Failed writing cooldown to data.yml");
-                e.printStackTrace();
-            }
-        });
+        synchronized (file) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    config.save(file);
+                } catch (Exception e) {
+                    plugin.getLogger().severe("Failed writing cooldown to data.yml");
+                    e.printStackTrace();
+                }
+            });
+        }
     }
 
     public void rollNextBoss() {
-        ArrayList<RaidData> bosses = new ArrayList<>(plugin.getRegisteredBosses().values());
+        ArrayList<RaidData> bosses = new ArrayList<>(getRegisteredBosses().values());
 
         this.currentRaidData = bosses.get(random.nextInt(bosses.size()));
 
         config.set("global-raid-data.next-boss", currentRaidData != null ? currentRaidData.getBossConfigKey() : null);
 
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-            try {
-                config.save(file);
-            } catch (Exception e) {
-                plugin.getLogger().severe("Failed writing next-boss to data.yml");
-                e.printStackTrace();
-            }
-        });
+        synchronized (file) {
+            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                try {
+                    config.save(file);
+                } catch (Exception e) {
+                    plugin.getLogger().severe("Failed writing next-boss to data.yml");
+                    e.printStackTrace();
+                }
+            });
+        }
     }
 
     public boolean isRaidOnCooldown() {
@@ -79,4 +88,49 @@ public class RaidManager {
     }
 
     public RaidData getNextRaidData() { return this.currentRaidData; }
+
+    private void loadRaidConfig() {
+        registeredBosses.clear(); //Clearing mainly for /raids reload
+
+        File file = new File(plugin.getDataFolder(), "raids.yml");
+
+        if (!file.exists()) {
+            file.getParentFile().mkdirs();
+        }
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+        ConfigurationSection section = config.getConfigurationSection("raids");
+
+        if (section == null) {
+            return;
+        }
+
+        for (String key : section.getKeys(false)) {
+            ConfigurationSection boss = section.getConfigurationSection(key);
+            if (boss == null) { continue; }
+
+            String raidWorldName = boss.getString("world");
+            String bossId = boss.getString("mythic-boss-id");
+            double bossSpawnLocationX = boss.getDouble("location.x");
+            double bossSpawnLocationY = boss.getDouble("location.y");
+            double bossSpawnLocationZ = boss.getDouble("location.z");
+            float bossSpawnYaw = (float) boss.getDouble("location.yaw");
+            float bossSpawnPitch = (float) boss.getDouble("location.pitch");
+            double bossLevel = boss.getDouble("boss-level");
+            int bossCooldown = boss.getInt("boss-cooldown");
+
+            RaidData data = new RaidData(key, raidWorldName, bossId, bossSpawnLocationX, bossSpawnLocationY, bossSpawnLocationZ, bossSpawnYaw, bossSpawnPitch, bossLevel, bossCooldown);
+
+            registeredBosses.put(key, data);
+        }
+    }
+
+    public Map<String, RaidData> getRegisteredBosses() {
+        return registeredBosses;
+    }
+
+    public RaidData getRaidDataByKey(String key) {
+        return registeredBosses.getOrDefault(key, null);
+    }
 }
