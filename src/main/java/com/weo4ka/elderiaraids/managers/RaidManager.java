@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -21,7 +21,6 @@ public class RaidManager {
     private final ElderiaRaids plugin;
     private final File dataFile;
     private FileConfiguration dataConfig;
-    private final Random random = new Random();
 
     private final Object fileLock = new Object();
 
@@ -34,7 +33,12 @@ public class RaidManager {
 
         this.dataFile = new File(plugin.getDataFolder(), "data.yml");
         if (!dataFile.exists()) {
-            plugin.saveResource("data.yml", false);
+            try {
+                dataFile.createNewFile(); // Просто создаем пустой файл на диске
+            } catch (IOException e) {
+                plugin.getLogger().severe("Failed creating data.yml file!");
+                e.printStackTrace();
+            }
         }
         this.dataConfig = YamlConfiguration.loadConfiguration(dataFile);
         loadRaidConfig();
@@ -71,7 +75,7 @@ public class RaidManager {
             return;
         }
 
-        this.currentRaidData = bosses.get(random.nextInt(bosses.size()));
+        this.currentRaidData = bosses.get(ThreadLocalRandom.current().nextInt(bosses.size()));
 
         synchronized (fileLock) {
             dataConfig.set("global-raid-data.next-boss", currentRaidData != null ? currentRaidData.getBossConfigKey() : null);

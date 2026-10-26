@@ -1,6 +1,6 @@
 package com.weo4ka.elderiaraids.utils;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.inventory.ItemStack;
 
@@ -9,8 +9,6 @@ public class LootItemData {
     private final int minAmount;
     private final int maxAmount;
     private final int weight;
-
-    private final Random random = new Random();
 
     public LootItemData(ItemStack stack, int minAmount, int maxAmount, int weight) {
         this.stack = stack;
@@ -25,7 +23,7 @@ public class LootItemData {
 
     public ItemStack getFinalStack() {
         ItemStack clone = stack.clone();
-        int amount = random.nextInt(minAmount, maxAmount);
+        int amount = ThreadLocalRandom.current().nextInt(minAmount, maxAmount + 1);
         clone.setAmount(amount);
         return clone;
     }

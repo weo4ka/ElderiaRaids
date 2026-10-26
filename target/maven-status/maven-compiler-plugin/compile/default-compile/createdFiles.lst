@@ -1,0 +1,7 @@
+com/weo4ka/elderiaraids/listeners/RaidBossKilledListener.class
+com/weo4ka/elderiaraids/utils/LootItemData.class
+com/weo4ka/elderiaraids/utils/RaidData.class
+com/weo4ka/elderiaraids/listeners/MovedToRaidWorldListener.class
+com/weo4ka/elderiaraids/ElderiaRaids.class
+com/weo4ka/elderiaraids/utils/Utils.class
+com/weo4ka/elderiaraids/managers/RaidManager.class

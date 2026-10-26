@@ -5,10 +5,13 @@ import java.util.Map;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.weo4ka.elderiaraids.commands.RaidsCommand;
 import com.weo4ka.elderiaraids.listeners.MovedToRaidWorldListener;
 import com.weo4ka.elderiaraids.listeners.RaidBossKilledListener;
 import com.weo4ka.elderiaraids.managers.PluginManager;
 import com.weo4ka.elderiaraids.utils.RaidData;
+
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 
 
 public class ElderiaRaids extends JavaPlugin {
@@ -26,6 +29,10 @@ public class ElderiaRaids extends JavaPlugin {
         this.getServer().getPluginManager().registerEvents(new MovedToRaidWorldListener(PluginManager.getInstance().getRaidManager()), this);
         this.getServer().getPluginManager().registerEvents(new RaidBossKilledListener(PluginManager.getInstance().getRaidManager()), this);
         
+        this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            event.registrar().register(RaidsCommand.createCommand("raids"));
+        });
+
         getLogger().info(getName() + " has been enabled!");
     }
 

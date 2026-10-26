@@ -46,7 +46,12 @@ public class LootManager {
             plugin.saveResource("raids.yml", false);
         }
         if (!dbFile.exists()) {
-            plugin.saveResource("loot-items-db.yml", false);
+            try {
+                dbFile.createNewFile(); // Просто создаем пустой файл на диске
+            } catch (IOException e) {
+                plugin.getLogger().severe("Failed creating loot-items-db.yml file!");
+                e.printStackTrace();
+            }
         }
 
         this.config = YamlConfiguration.loadConfiguration(file);
@@ -57,65 +62,100 @@ public class LootManager {
 
     private void loadLootConfig(List<RaidData> bosses) {
         pool.clear();
-        
+        damageCategoryToMinDamage.clear();
+        damageCategoryToSlotAmount.clear();
+
+        plugin.getLogger().info("[LoadDebug] --- НАЧАЛО ЗАГРУЗКИ КОНФИГУРАЦИИ ЛУТА ---");
+
         ConfigurationSection bossSection = config.getConfigurationSection("raids");
-        if (bossSection == null) {return;}
+        if (bossSection == null) {
+            plugin.getLogger().severe("[LoadDebug] Секция 'raids' не найдена в raids.yml!");
+            return;
+        }
 
         for (RaidData boss : bosses) {
-            ConfigurationSection itemsSection = bossSection.getConfigurationSection(boss.getBossId() + ".loot");
-            if (itemsSection == null) {continue;}
+            plugin.getLogger().info("[LoadDebug] Обработка босса из списка: " + boss.getBossConfigKey());
+
+            ConfigurationSection itemsSection = bossSection.getConfigurationSection(boss.getBossConfigKey() + ".loot");
+            if (itemsSection == null) {
+                plugin.getLogger().warning("[LoadDebug] Секция лута для босса '" + boss.getBossConfigKey() + "' отсутствует в raids.yml.");
+                continue;
+            }
 
             Map<String, List<LootItemData>> damageCategoriesMap = new HashMap<>();
             Map<String, Integer> categoryToAmount = new HashMap<>();
             TreeMap<Integer, String> damageToCategory = new TreeMap<>();
 
             for (String damageCategory : itemsSection.getKeys(false)) {
+                plugin.getLogger().info("[LoadDebug] Обнаружена категория урона: " + damageCategory);
+
                 ConfigurationSection itemSection = itemsSection.getConfigurationSection(damageCategory + ".items");
-                if (itemSection == null) {continue;}
+                if (itemSection == null) {
+                    plugin.getLogger().warning("[LoadDebug] Секция '.items' для категории '" + damageCategory + "' пуста или отсутствует.");
+                    continue;
+                }
 
                 categoryToAmount.put(damageCategory, itemsSection.getInt(damageCategory + ".max-items"));
                 damageToCategory.put(itemsSection.getInt(damageCategory + ".min-damage"), damageCategory);
 
                 List<LootItemData> categoryItems = new ArrayList<>();
                 for (String itemId : itemSection.getKeys(false)) {
+                    plugin.getLogger().info("[LoadDebug] Попытка загрузки itemId: '" + itemId + "' из БД...");
+
                     ConfigurationSection item = itemSection.getConfigurationSection(itemId);
                     if (item == null) {continue;}
 
                     ItemStack stack = loadLootItemFromDataBase(itemId);
-                    if (stack == null) {continue;}
+                    if (stack == null) {
+                        plugin.getLogger().severe("[LoadDebug] Результат БД: NULL! Предмет '" + itemId + "' не найден в loot-items-db.yml");
+                        continue;
+                    }
 
-                    int minAmount = item.getInt("min-amount");
-                    int maxAmount = item.getInt("max-amount");
-                    int weight = item.getInt("chance");
+                    if (stack.getType() == org.bukkit.Material.AIR || stack.getType().isAir() || stack.getAmount() <= 0) {
+                        plugin.getLogger().warning("[LoadDebug]       [!] ПРЕДУПРЕЖДЕНИЕ: Этот предмет распознан как воздух/пустой. Пропускаем его добавление в пул!");
+                        continue;
+                    }
 
+                    int minAmount = item.getInt("min-amount", 1);
+                    int maxAmount = item.getInt("max-amount", 1);
+                    int weight = item.getInt("chance", 1);
+
+                    plugin.getLogger().info("[LoadDebug] Успешно добавлен в пул памяти! Вес=" + weight + " Стак: " + stack.toString());
                     LootItemData data = new LootItemData(stack, minAmount, maxAmount, weight);
                     categoryItems.add(data);
                 }
 
                 damageCategoriesMap.put(damageCategory, categoryItems);
+                plugin.getLogger().info("[LoadDebug] Итого добавлено предметов в категорию '" + damageCategory + "': " + categoryItems.size());
             }
-            pool.put(boss.getBossId(), damageCategoriesMap);
-            damageCategoryToMinDamage.put(boss.getBossId(), damageToCategory);
-            damageCategoryToSlotAmount.put(boss.getBossId(), categoryToAmount);
+            pool.put(boss.getBossConfigKey(), damageCategoriesMap);
+            damageCategoryToMinDamage.put(boss.getBossConfigKey(), damageToCategory);
+            damageCategoryToSlotAmount.put(boss.getBossConfigKey(), categoryToAmount);
         }
+        plugin.getLogger().info("[LoadDebug] --- ЗАВЕРШЕНИЕ ЗАГРУЗКИ КОНФИГУРАЦИИ ЛУТА ---");
     }
 
-    public List<ItemStack> generateLootFromPool(String bossId, String damageCategory) {
+    public List<ItemStack> generateLootFromPool(String bossConfigKey, int damage) {
         List<ItemStack> loot = new ArrayList<>();
-        
-        Map<String, List<LootItemData>> bossPool = pool.get(bossId);
+        String damageCategory = getDamageCategoryFromDamage(bossConfigKey, damage).orElse("");
+
+        Map<String, List<LootItemData>> bossPool = pool.get(bossConfigKey);
         if (bossPool == null) return loot;
 
         List<LootItemData> originalPool = bossPool.get(damageCategory);
         if (originalPool == null || originalPool.isEmpty()) return loot;
 
+        // Делаем копию пула для текущего расчета
         List<LootItemData> tmpPool = new ArrayList<>(originalPool);
 
-        Map<String, Integer> slotsMap = damageCategoryToSlotAmount.get(bossId);
+        Map<String, Integer> slotsMap = damageCategoryToSlotAmount.get(bossConfigKey);
         int maxSlots = (slotsMap != null) ? slotsMap.getOrDefault(damageCategory, 0) : 0;
+        
+        // Вычисляем, сколько предметов нужно выдать (не больше, чем есть в пуле)
         int finalAmount = Math.min(maxSlots, tmpPool.size());
 
         for (int i = 0; i < finalAmount; i++) {
+            // Считаем общий вес оставшихся предметов заново на каждой итерации!
             int totalWeight = 0;
             for (LootItemData item : tmpPool) {
                 totalWeight += item.getWeight();
@@ -126,17 +166,32 @@ public class LootManager {
             int rndIdx = ThreadLocalRandom.current().nextInt(totalWeight);
             int currentSum = 0;
 
-            for (int j = 0; j < tmpPool.size(); j++) {
-                LootItemData item = tmpPool.get(j);
+            // ИСПРАВЛЕНО: Безопасный поиск предмета
+            LootItemData selectedItem = null;
+            for (LootItemData item : tmpPool) {
                 currentSum += item.getWeight();
-
                 if (rndIdx < currentSum) {
-                    loot.add(item.getFinalStack());
-                    tmpPool.remove(j);
+                    selectedItem = item;
                     break;
                 }
             }
+
+            if (selectedItem != null) {
+                // Генерируем финальный ItemStack (с расчетом min/max количества из LootItemData)
+                ItemStack finalStack = selectedItem.getFinalStack();
+                
+                // Дополнительная супер-защита: если вдруг на этапе клонирования что-то пошло не так
+                if (finalStack != null && !finalStack.getType().isAir()) {
+                    loot.add(finalStack);
+                } else {
+                    plugin.getLogger().warning("[ElderiaRaids] Попытка добавить AIR в генераторе лута была заблокирована!");
+                }
+                
+                // Безопасно удаляем объект из копии пула, чтобы он не выпал дважды за один рейд
+                tmpPool.remove(selectedItem);
+            }
         }
+        
         return loot;
     }
 
@@ -162,11 +217,12 @@ public class LootManager {
         return item != null ? item.clone() : null;
     }
 
-    public Map<String, Integer> getDamageCategoryToMaxSlots(String bossId) { return damageCategoryToSlotAmount.getOrDefault(bossId, new HashMap<>()); }
-    public TreeMap<Integer, String> getDamageCategoryToMinDamage(String bossId) { return damageCategoryToMinDamage.getOrDefault(bossId, new TreeMap<>()); }
+    public Map<String, Integer> getDamageCategoryToMaxSlots(String bossConfigKey) { return damageCategoryToSlotAmount.getOrDefault(bossConfigKey, new HashMap<>()); }
+    public TreeMap<Integer, String> getDamageCategoryToMinDamage(String bossConfigKey) { return damageCategoryToMinDamage.getOrDefault(bossConfigKey, new TreeMap<>()); }
 
-    public Optional<String> getDamageCategoryFromDamage(String bossId, int damage) {
-        TreeMap<Integer, String> map = getDamageCategoryToMinDamage(bossId);
+    @SuppressWarnings("null")
+    public Optional<String> getDamageCategoryFromDamage(String bossConfigKey, int damage) {
+        TreeMap<Integer, String> map = getDamageCategoryToMinDamage(bossConfigKey);
         if (map == null) return Optional.empty();
 
         Map.Entry<Integer, String> matchedCategory = map.floorEntry(damage);
