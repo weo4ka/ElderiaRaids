@@ -3,22 +3,29 @@ package com.weo4ka.elderiaraids.managers;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import com.weo4ka.elderiaraids.ElderiaRaids;
 import com.weo4ka.elderiaraids.utils.LootItemData;
 import com.weo4ka.elderiaraids.utils.RaidData;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public class LootManager {
 
@@ -32,6 +39,10 @@ public class LootManager {
     private final File dbFile;
     private FileConfiguration dbConfig;
 
+    private final File playerLootDBFile;
+    private FileConfiguration playerLootDBConfigFile;
+    private final Map<UUID, Inventory> activeStashes = new HashMap<>();
+
     public LootManager(ElderiaRaids plugin, List<RaidData> bosses) {
         this.plugin = plugin;
 
@@ -41,6 +52,7 @@ public class LootManager {
 
         this.file = new File(plugin.getDataFolder(), "raids.yml");
         this.dbFile = new File(plugin.getDataFolder(), "loot-items-db.yml");
+        this.playerLootDBFile = new File(plugin.getDataFolder(), "player-stashes.yml");
 
         if (!file.exists()) {
             plugin.saveResource("raids.yml", false);
@@ -53,9 +65,18 @@ public class LootManager {
                 e.printStackTrace();
             }
         }
+        if (!playerLootDBFile.exists()) {
+            try {
+                playerLootDBFile.createNewFile();
+            } catch (IOException e) {
+                plugin.getLogger().severe("Failed creating player-stashes.yml file!");
+                e.printStackTrace();
+            }
+        }
 
         this.config = YamlConfiguration.loadConfiguration(file);
         this.dbConfig = YamlConfiguration.loadConfiguration(dbFile);
+        this.playerLootDBConfigFile = YamlConfiguration.loadConfiguration(playerLootDBFile);
 
         loadLootConfig(bosses);
     }
@@ -227,5 +248,73 @@ public class LootManager {
 
         Map.Entry<Integer, String> matchedCategory = map.floorEntry(damage);
         return Optional.ofNullable(matchedCategory).map(Map.Entry::getValue);
+    }
+
+    /*
+    
+        Сохранение лута в кэш и на диск, чтобы если игрок его не забрал, лут не пропал
+
+    */
+    public Inventory getStash(Player player) {
+        return activeStashes.computeIfAbsent(player.getUniqueId(), uuid -> {
+            // Создаем виртуальный сундук под размер твоего меню наград (например, slotsAmount)
+            int size = PluginManager.getInstance().getLootMenuManager().getSlotAmount();
+            Inventory stash = Bukkit.createInventory(null, size, LegacyComponentSerializer.legacyAmpersand().deserialize(PluginManager.getInstance().getLootMenuManager().getTitle()));
+            
+            // Загружаем предметы из stash.yml, если они там есть
+            if (playerLootDBConfigFile.contains("stashes." + uuid)) {
+                List<?> list = playerLootDBConfigFile.getList("stashes." + uuid);
+                if (list != null) {
+                    for (int i = 0; i < Math.min(list.size(), size); i++) {
+                        if (list.get(i) instanceof ItemStack item) {
+                            stash.setItem(i, item);
+                        }
+                    }
+                }
+            } else {
+                // Если склада еще не было в файле, заполняем его декоративными кнопками по умолчанию
+                PluginManager.getInstance().getLootMenuManager().fillLootMenuInventory(stash);
+            }
+            return stash;
+        });
+    }
+
+    public void saveLeftoverLootToStash(Player player, Inventory menuInventory) {
+        Inventory stash = getStash(player);
+        List<Integer> dropSlots = PluginManager.getInstance().getLootMenuManager().getDropSlots();
+
+        // Переносим предметы из слотов дропа закрытого меню в ТОЧНО ТАКИЕ ЖЕ слоты склада
+        for (int slot : dropSlots) {
+            ItemStack item = menuInventory.getItem(slot);
+            if (item != null && !item.getType().isAir()) {
+                // Если на складе в этом слоте уже что-то лежит (с прошлого рейда), 
+                // Bukkit попытается найти свободное место среди drop-слотов или положит сверху
+                stash.setItem(slot, item);
+            }
+        }
+
+        // Сохраняем обновленный склад на диск
+        saveStashToDisk(player.getUniqueId(), stash);
+    }
+
+    public void saveStashToDisk(UUID uuid, Inventory stash) {
+        List<ItemStack> contents = Arrays.asList(stash.getContents());
+        playerLootDBConfigFile.set("stashes." + uuid, contents);
+
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                playerLootDBConfigFile.save(playerLootDBFile);
+            } catch (IOException e) {
+                plugin.getLogger().severe("Не удалось сохранить stash.yml для " + uuid);
+                e.printStackTrace();
+            }
+        });
+    }
+
+    public void unloadPlayer(UUID uuid) {
+        Inventory stash = activeStashes.remove(uuid);
+        if (stash != null) {
+            saveStashToDisk(uuid, stash);
+        }
     }
 }

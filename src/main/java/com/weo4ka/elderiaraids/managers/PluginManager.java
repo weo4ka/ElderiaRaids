@@ -11,6 +11,7 @@ public class PluginManager {
     private PluginManager() {}
     private RaidManager raidManager;
     private LootManager lootManager;
+    private LootMenuManager lootMenuManager;
 
     public static PluginManager getInstance() {
         if (instance == null) {
@@ -22,8 +23,11 @@ public class PluginManager {
     public void initialize(ElderiaRaids plugin) {
         this.raidManager = new RaidManager(plugin);
         this.lootManager = new LootManager(plugin, new ArrayList<RaidData>(this.raidManager.getRegisteredBosses().values()));
+        this.lootMenuManager = new LootMenuManager(plugin);
+
     }
 
     public RaidManager getRaidManager() { return raidManager; }
     public LootManager getLootManager() { return lootManager; }
+    public LootMenuManager getLootMenuManager() { return lootMenuManager; }
 }
