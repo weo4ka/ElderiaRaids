@@ -1,6 +1,7 @@
 package com.weo4ka.elderiaraids.managers;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,26 +19,30 @@ public class RaidManager {
     private Map<String, RaidData> registeredBosses = new HashMap<>();
 
     private final ElderiaRaids plugin;
-    private final File file;
-    private final FileConfiguration config;
+    private final File dataFile;
+    private FileConfiguration dataConfig;
     private final Random random = new Random();
+
+    private final Object fileLock = new Object();
 
     public RaidManager(ElderiaRaids plugin) {
         this.plugin = plugin;
-        loadRaidConfig();
 
-        this.file = new File(plugin.getDataFolder(), "data.yml");
-
-        if (!this.file.getParentFile().exists()) {
-            this.file.getParentFile().mkdirs();
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
         }
 
-        this.config = YamlConfiguration.loadConfiguration(file);
+        this.dataFile = new File(plugin.getDataFolder(), "data.yml");
+        if (!dataFile.exists()) {
+            plugin.saveResource("data.yml", false);
+        }
+        this.dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+        loadRaidConfig();
 
-        this.cooldown = this.config.getLong("global-raid-data.cooldown", 0);
-        String currentBossId = this.config.getString("global-raid-data.next-boss");
+        this.cooldown = this.dataConfig.getLong("global-raid-data.cooldown", 0);
+        String currentBossId = this.dataConfig.getString("global-raid-data.next-boss");
 
-        if (currentBossId != null || currentBossId != "") {
+        if (currentBossId != null && !currentBossId.trim().isEmpty()) {
             this.currentRaidData = getRaidDataByKey(currentBossId);
         }
     }
@@ -45,13 +50,12 @@ public class RaidManager {
     public void setCooldown(int seconds) {
         this.cooldown = System.currentTimeMillis() + (seconds * 1000);
 
-        config.set("global-raid-data.cooldown", this.cooldown);
-
-        synchronized (file) {
+        synchronized (fileLock) {
+            dataConfig.set("global-raid-data.cooldown", this.cooldown);
             plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
                 try {
-                    config.save(file);
-                } catch (Exception e) {
+                    dataConfig.save(dataFile);
+                } catch (IOException e) {
                     plugin.getLogger().severe("Failed writing cooldown to data.yml");
                     e.printStackTrace();
                 }
@@ -61,16 +65,20 @@ public class RaidManager {
 
     public void rollNextBoss() {
         ArrayList<RaidData> bosses = new ArrayList<>(getRegisteredBosses().values());
+        if (bosses.isEmpty()) {
+            plugin.getLogger().warning("Failed choosing next boss: List is empty");
+            this.currentRaidData = null;
+            return;
+        }
 
         this.currentRaidData = bosses.get(random.nextInt(bosses.size()));
 
-        config.set("global-raid-data.next-boss", currentRaidData != null ? currentRaidData.getBossConfigKey() : null);
-
-        synchronized (file) {
+        synchronized (fileLock) {
+            dataConfig.set("global-raid-data.next-boss", currentRaidData != null ? currentRaidData.getBossConfigKey() : null);
             plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
                 try {
-                    config.save(file);
-                } catch (Exception e) {
+                    dataConfig.save(dataFile);
+                } catch (IOException e) {
                     plugin.getLogger().severe("Failed writing next-boss to data.yml");
                     e.printStackTrace();
                 }
@@ -95,7 +103,7 @@ public class RaidManager {
         File file = new File(plugin.getDataFolder(), "raids.yml");
 
         if (!file.exists()) {
-            file.getParentFile().mkdirs();
+            plugin.saveResource("raids.yml", false);
         }
 
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);

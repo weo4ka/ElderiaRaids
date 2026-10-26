@@ -1,10 +1,13 @@
 package com.weo4ka.elderiaraids.managers;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.configuration.ConfigurationSection;
@@ -20,42 +23,58 @@ import com.weo4ka.elderiaraids.utils.RaidData;
 public class LootManager {
 
     private Map<String, Map<String, List<LootItemData>>> pool = new HashMap<>();
+    private Map<String, Map<String, Integer>> damageCategoryToSlotAmount = new HashMap<>();
+    private Map<String, TreeMap<Integer, String>> damageCategoryToMinDamage = new HashMap<>();
 
     private final ElderiaRaids plugin;
     private final File file;
     private final FileConfiguration config;
     private final File dbFile;
-    private final FileConfiguration dbConfig;
+    private FileConfiguration dbConfig;
 
     public LootManager(ElderiaRaids plugin, List<RaidData> bosses) {
         this.plugin = plugin;
 
+        if (!plugin.getDataFolder().exists()) {
+            plugin.getDataFolder().mkdirs();
+        }
+
         this.file = new File(plugin.getDataFolder(), "raids.yml");
         this.dbFile = new File(plugin.getDataFolder(), "loot-items-db.yml");
-        if (!this.file.getParentFile().exists()) {
-            this.file.getParentFile().mkdirs();
+
+        if (!file.exists()) {
+            plugin.saveResource("raids.yml", false);
         }
-        if (!this.dbFile.getParentFile().exists()) {
-            this.dbFile.getParentFile().mkdirs();
+        if (!dbFile.exists()) {
+            plugin.saveResource("loot-items-db.yml", false);
         }
 
         this.config = YamlConfiguration.loadConfiguration(file);
         this.dbConfig = YamlConfiguration.loadConfiguration(dbFile);
 
+        loadLootConfig(bosses);
+    }
+
+    private void loadLootConfig(List<RaidData> bosses) {
         pool.clear();
         
         ConfigurationSection bossSection = config.getConfigurationSection("raids");
         if (bossSection == null) {return;}
 
         for (RaidData boss : bosses) {
-            ConfigurationSection itemsSection = bossSection.getConfigurationSection(boss.getBossId() + ".items");
+            ConfigurationSection itemsSection = bossSection.getConfigurationSection(boss.getBossId() + ".loot");
             if (itemsSection == null) {continue;}
 
             Map<String, List<LootItemData>> damageCategoriesMap = new HashMap<>();
+            Map<String, Integer> categoryToAmount = new HashMap<>();
+            TreeMap<Integer, String> damageToCategory = new TreeMap<>();
 
             for (String damageCategory : itemsSection.getKeys(false)) {
-                ConfigurationSection itemSection = itemsSection.getConfigurationSection(damageCategory);
+                ConfigurationSection itemSection = itemsSection.getConfigurationSection(damageCategory + ".items");
                 if (itemSection == null) {continue;}
+
+                categoryToAmount.put(damageCategory, itemsSection.getInt(damageCategory + ".max-items"));
+                damageToCategory.put(itemsSection.getInt(damageCategory + ".min-damage"), damageCategory);
 
                 List<LootItemData> categoryItems = new ArrayList<>();
                 for (String itemId : itemSection.getKeys(false)) {
@@ -76,23 +95,34 @@ public class LootManager {
                 damageCategoriesMap.put(damageCategory, categoryItems);
             }
             pool.put(boss.getBossId(), damageCategoriesMap);
+            damageCategoryToMinDamage.put(boss.getBossId(), damageToCategory);
+            damageCategoryToSlotAmount.put(boss.getBossId(), categoryToAmount);
         }
     }
 
-    public List<ItemStack> generateLootFromPool(int requiredAmount, String damageCategory) {
+    public List<ItemStack> generateLootFromPool(String bossId, String damageCategory) {
         List<ItemStack> loot = new ArrayList<>();
-        List<LootItemData> tmpPool = pool.get(PluginManager.getInstance().getRaidManager().getNextRaidData().getBossId()).get(damageCategory);
+        
+        Map<String, List<LootItemData>> bossPool = pool.get(bossId);
+        if (bossPool == null) return loot;
 
-        if (pool.isEmpty()) { return loot; }
-        int finalAmount = Math.min(requiredAmount, tmpPool.size());
+        List<LootItemData> originalPool = bossPool.get(damageCategory);
+        if (originalPool == null || originalPool.isEmpty()) return loot;
 
-        for (int i = 0; i < finalAmount ; i++) {
+        List<LootItemData> tmpPool = new ArrayList<>(originalPool);
+
+        Map<String, Integer> slotsMap = damageCategoryToSlotAmount.get(bossId);
+        int maxSlots = (slotsMap != null) ? slotsMap.getOrDefault(damageCategory, 0) : 0;
+        int finalAmount = Math.min(maxSlots, tmpPool.size());
+
+        for (int i = 0; i < finalAmount; i++) {
             int totalWeight = 0;
             for (LootItemData item : tmpPool) {
                 totalWeight += item.getWeight();
             }
 
-            if (totalWeight <=0 ) { return loot; }
+            if (totalWeight <= 0) break;
+            
             int rndIdx = ThreadLocalRandom.current().nextInt(totalWeight);
             int currentSum = 0;
 
@@ -106,33 +136,40 @@ public class LootManager {
                     break;
                 }
             }
-
         }
         return loot;
     }
 
     public void saveLootItemToDataBase(Player player, String itemId) {
         ItemStack stack = player.getInventory().getItemInMainHand();
-        File file = new File(plugin.getDataFolder(), "loot-item-db.yml");
-        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
-
         ItemStack clone = stack.clone();
         clone.setAmount(1);
-        config.set("items." + itemId, clone);
 
-        synchronized (dbFile) {
-            plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-                try {
-                    config.save(file);
-                } catch (Exception e) {
-                    plugin.getLogger().severe("Failed writing itemstack into loot-items-db.yml");
-                    e.printStackTrace();
-                }
-            });
-        };
+        dbConfig.set("items." + itemId, clone);
+
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                dbConfig.save(dbFile);
+            } catch (IOException e) {
+                plugin.getLogger().severe("Failed saving item to loot-items-db.yml!");
+                e.printStackTrace();
+            }
+        });
     }
 
     public ItemStack loadLootItemFromDataBase(String itemId) {
-        return dbConfig.getItemStack("items." + itemId);
+        ItemStack item = dbConfig.getItemStack("items." + itemId);
+        return item != null ? item.clone() : null;
+    }
+
+    public Map<String, Integer> getDamageCategoryToMaxSlots(String bossId) { return damageCategoryToSlotAmount.getOrDefault(bossId, new HashMap<>()); }
+    public TreeMap<Integer, String> getDamageCategoryToMinDamage(String bossId) { return damageCategoryToMinDamage.getOrDefault(bossId, new TreeMap<>()); }
+
+    public Optional<String> getDamageCategoryFromDamage(String bossId, int damage) {
+        TreeMap<Integer, String> map = getDamageCategoryToMinDamage(bossId);
+        if (map == null) return Optional.empty();
+
+        Map.Entry<Integer, String> matchedCategory = map.floorEntry(damage);
+        return Optional.ofNullable(matchedCategory).map(Map.Entry::getValue);
     }
 }

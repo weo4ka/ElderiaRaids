@@ -1,0 +1,93 @@
+# Custom Configuration
+# Add your custom configuration here
+
+raids:
+    fallen_ravager:
+        world: "raid_world"
+        mythic-boss-id: "ravagerfallen"
+        location:
+            x: -76.5
+            y: 47.0
+            z: -80.5
+            yaw: 180.0
+            pitch: 0.0
+        boss-level: 10.0
+        boss-cooldown: 1800
+        loot:
+            low-damage:
+                min-damage: 100
+                max-items: 3
+                items:
+                    knight-sword:
+                        min-amount: 0
+                        max-amount: 1
+                        chance: 25
+                    diamond:
+                        min-amount: 3
+                        max-amount: 5
+                        chance: 25
+                    golden-apple:
+                        min-amount: 1
+                        max-amount: 3
+                        chance: 35
+            high-damage:
+                min-damage: 350
+                max-items: 7
+                items:
+                    knight-sword:
+                        min-amount: 0
+                        max-amount: 1
+                        chance: 25
+                    diamond:
+                        min-amount: 3
+                        max-amount: 5
+                        chance: 25
+                    golden-apple:
+                        min-amount: 1
+                        max-amount: 3
+                        chance: 35
+    
+    fallen_defender:
+        world: "raid_world"
+        mythic-boss-id: "defenderfallen"
+        location:
+            x: -76.5
+            y: 47.0
+            z: -80.5
+            yaw: 180.0
+            pitch: 0.0
+        boss-level: 10.0
+        boss-cooldown: 1800
+        loot:
+            low-damage:
+                min-damage: 125
+                max-items: 3
+                items:
+                    robins-bow:
+                        min-amount: 0
+                        max-amount: 1
+                        chance: 25
+                    netherite-scrap:
+                        min-amount: 3
+                        max-amount: 5
+                        chance: 25
+                    golden-apple:
+                        min-amount: 1
+                        max-amount: 3
+                        chance: 35
+            high-damage:
+                min-damage: 425
+                max-items: 7
+                items:
+                    robins-bow:
+                        min-amount: 0
+                        max-amount: 1
+                        chance: 25
+                    diamond:
+                        min-amount: 3
+                        max-amount: 5
+                        chance: 25
+                    golden-apple:
+                        min-amount: 1
+                        max-amount: 3
+                        chance: 35
