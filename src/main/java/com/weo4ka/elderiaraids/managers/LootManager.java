@@ -297,6 +297,48 @@ public class LootManager {
         saveStashToDisk(player.getUniqueId(), stash);
     }
 
+    public void saveLeftoverToStashForOffline(UUID uuid, List<ItemStack> loot) {
+        List<ItemStack> currentContents = new ArrayList<>();
+        if (playerLootDBConfigFile.contains("stashes." + uuid)) {
+            List<?> list = playerLootDBConfigFile.getList("stashes." + uuid);
+            if (list != null) {
+                for (Object obj : list) {
+                    if (obj instanceof ItemStack item) currentContents.add(item);
+                    else currentContents.add(null);
+                }
+            }
+        }
+
+        int size = PluginManager.getInstance().getLootMenuManager().getSlotAmount();
+        while (currentContents.size() < size) {
+            currentContents.add(null);
+        }
+
+        // Раскладываем лут в свободные drop-слоты
+        List<Integer> dropSlots = PluginManager.getInstance().getLootMenuManager().getDropSlots();
+        int lootIndex = 0;
+        
+        for (int slot : dropSlots) {
+            if (lootIndex >= loot.size()) break;
+            
+            ItemStack currentItem = currentContents.get(slot);
+            // Если слот пустой (или там воздух) — кладем туда наш предмет
+            if (currentItem == null || currentItem.getType().isAir()) {
+                currentContents.set(slot, loot.get(lootIndex));
+                lootIndex++;
+            }
+        }
+
+        // Сохраняем обновленный оффлайн-список на диск
+        playerLootDBConfigFile.set("stashes." + uuid, currentContents);
+        try {
+            playerLootDBConfigFile.save(playerLootDBFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Не удалось сохранить лут для оффлайн игрока с UUID: " + uuid);
+            e.printStackTrace();
+        }
+    }
+
     public void saveStashToDisk(UUID uuid, Inventory stash) {
         List<ItemStack> contents = Arrays.asList(stash.getContents());
         playerLootDBConfigFile.set("stashes." + uuid, contents);

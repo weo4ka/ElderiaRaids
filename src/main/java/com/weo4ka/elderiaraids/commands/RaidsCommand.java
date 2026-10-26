@@ -24,10 +24,10 @@ public class RaidsCommand {
             .then(Commands.literal("reroll_boss"))
                 .executes(context -> {
                     RaidManager manager = PluginManager.getInstance().getRaidManager();
-                    manager.rollNextBoss(); //Rolling Next Boss
+                    manager.rollNextRaid(); //Rolling Next Boss
                     final CommandSender sender = context.getSource().getSender();
 
-                    sender.sendPlainMessage("Successfully rolled next boss. Its ID: " + manager.getNextRaidData().getBossConfigKey());
+                    sender.sendPlainMessage("Successfully rolled next boss. Its ID: " + manager.getNextRaidData().getBossConfigKey() + ". Raid will start in " + manager.howMuchCooldownLeft() + " seconds");
                     return Command.SINGLE_SUCCESS;
                 }
             )

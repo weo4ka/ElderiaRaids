@@ -67,7 +67,7 @@ public class RaidManager {
         }
     }
 
-    public void rollNextBoss() {
+    public void rollNextRaid() {
         ArrayList<RaidData> bosses = new ArrayList<>(getRegisteredBosses().values());
         if (bosses.isEmpty()) {
             plugin.getLogger().warning("Failed choosing next boss: List is empty");
@@ -76,6 +76,8 @@ public class RaidManager {
         }
 
         this.currentRaidData = bosses.get(ThreadLocalRandom.current().nextInt(bosses.size()));
+
+        setCooldown(currentRaidData.getBossCooldown());
 
         synchronized (fileLock) {
             dataConfig.set("global-raid-data.next-boss", currentRaidData != null ? currentRaidData.getBossConfigKey() : null);

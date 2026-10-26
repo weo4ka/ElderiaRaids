@@ -3,10 +3,11 @@
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/listeners/LootMenuListener.java
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/listeners/MovedToRaidWorldListener.java
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/listeners/PlayerLeftListener.java
-/home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/listeners/RaidBossKilledListener.java
+/home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/listeners/RaidBossEventsListener.java
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/managers/LootManager.java
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/managers/LootMenuManager.java
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/managers/PluginManager.java
+/home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/managers/RaidDamageManager.java
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/managers/RaidManager.java
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/utils/LootItemData.java
 /home/weo4ka/Projects/Plugins/ElderiaRaids/src/main/java/com/weo4ka/elderiaraids/utils/LootMenuItem.java

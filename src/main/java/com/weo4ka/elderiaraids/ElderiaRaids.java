@@ -9,7 +9,7 @@ import com.weo4ka.elderiaraids.commands.RaidsCommand;
 import com.weo4ka.elderiaraids.listeners.LootMenuListener;
 import com.weo4ka.elderiaraids.listeners.MovedToRaidWorldListener;
 import com.weo4ka.elderiaraids.listeners.PlayerLeftListener;
-import com.weo4ka.elderiaraids.listeners.RaidBossKilledListener;
+import com.weo4ka.elderiaraids.listeners.RaidBossEventsListener;
 import com.weo4ka.elderiaraids.managers.PluginManager;
 import com.weo4ka.elderiaraids.utils.RaidData;
 
@@ -29,7 +29,11 @@ public class ElderiaRaids extends JavaPlugin {
 
         // Register listeners
         this.getServer().getPluginManager().registerEvents(new MovedToRaidWorldListener(PluginManager.getInstance().getRaidManager()), this);
-        this.getServer().getPluginManager().registerEvents(new RaidBossKilledListener(PluginManager.getInstance().getRaidManager(), PluginManager.getInstance().getLootMenuManager(), PluginManager.getInstance().getLootManager()), this);
+        this.getServer().getPluginManager().registerEvents(new RaidBossEventsListener(
+                                                            PluginManager.getInstance().getRaidManager(), 
+                                                            PluginManager.getInstance().getLootManager(), 
+                                                            PluginManager.getInstance().getLootMenuManager(), 
+                                                            PluginManager.getInstance().getRaidDamageManager()), this);
         this.getServer().getPluginManager().registerEvents(new LootMenuListener(PluginManager.getInstance().getLootMenuManager()), this);
         this.getServer().getPluginManager().registerEvents(new PlayerLeftListener(PluginManager.getInstance().getLootManager()), this);
 
