@@ -1,7 +1,6 @@
 package com.weo4ka.elderiaraids.listeners;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,8 +20,6 @@ import com.weo4ka.elderiaraids.managers.LootManager;
 import com.weo4ka.elderiaraids.managers.LootMenuManager;
 import com.weo4ka.elderiaraids.managers.RaidManager;
 import com.weo4ka.elderiaraids.utils.RaidData;
-
-import io.lumine.mythic.bukkit.events.MythicMobDeathEvent;
 
 public class RaidBossEventsListener implements Listener{
 
