@@ -1,6 +1,7 @@
 package com.weo4ka.elderiaraids.listeners;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -10,8 +11,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 
 import com.weo4ka.elderiaraids.managers.LootManager;
@@ -34,16 +37,11 @@ public class RaidBossEventsListener implements Listener{
         this.lootMenuManager = lootMenuManager;
     }
 
-    @EventHandler 
-    public void onBossKilled(MythicMobDeathEvent event) {
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onBossKilled(EntityDeathEvent event) {
         RaidData data = raidManager.getCurrentRaidData();
-        if (event.getKiller().getWorld().getName() != data.getRaidWorldName()) {
-            return;
-        }
+        if (event.getEntity().getUniqueId() != raidManager.getCurrentRaidBossUUID()) return;
 
-        if (event.getMob().getUniqueId() == raidManager.getCurrentRaidBossUUID()) {
-            return;
-        }
         Map<UUID, Double> damageMap = raidManager.getDamageMap();
 
         for (Map.Entry<UUID, Double> entry : damageMap.entrySet()) {
@@ -60,9 +58,7 @@ public class RaidBossEventsListener implements Listener{
             List<ItemStack> loot = lootManager.generateLootFromPool(data.getBossConfigKey(), (int) playerDamage);
             lootMenuManager.openLootMenu(player, loot);
         }
-        raidManager.clearRaidToBossUUIDMap();
-        raidManager.clearDamageMap();
-        raidManager.rollNextRaid();
+        raidManager.resetRaid();
     }
 
     @EventHandler 

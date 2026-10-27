@@ -16,6 +16,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import com.weo4ka.elderiaraids.ElderiaRaids;
 import com.weo4ka.elderiaraids.utils.LootMenuItem;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public class LootMenuManager {
@@ -63,7 +65,7 @@ public class LootMenuManager {
 
             String configKey = itemConfigKey;
             String displayName = item.getString("display-name");
-            String displayLore = item.getString("lore");
+            List<String> displayLore = item.getStringList("lore");
             String material = item.getString("material");
             int slot = item.getInt("slot");
 
@@ -92,11 +94,19 @@ public class LootMenuManager {
             ItemMeta meta = stack.getItemMeta();
             if (meta != null) {
                 if (item.getDisplayName() != null) {
-                    meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(item.getDisplayName()));
+                    meta.displayName(LegacyComponentSerializer.legacyAmpersand()
+                                                            .deserialize(item.getDisplayName())
+                                                            .decoration(TextDecoration.ITALIC, false));
                 }
 
                 if (item.getDisplayLore() != null && !item.getDisplayLore().isEmpty()) {
-                    meta.lore(List.of(LegacyComponentSerializer.legacyAmpersand().deserialize(item.getDisplayLore())));
+                    List<Component> loreComponents = new ArrayList<>();
+                    for (String line : item.getDisplayLore()) {
+                        loreComponents.add(LegacyComponentSerializer.legacyAmpersand()
+                            .deserialize(line)
+                            .decoration(TextDecoration.ITALIC, false));
+                    }
+                    meta.lore(loreComponents);
                 }
                 stack.setItemMeta(meta);
             }

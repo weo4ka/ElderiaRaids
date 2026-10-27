@@ -12,4 +12,4 @@ menu:
                 - "Ваш лут сохранится"
                 - "И будет доступен по /raids stash"
             material: BARRIER
-            slot: 26
+            slot: 40

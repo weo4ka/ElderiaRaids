@@ -1,2 +1,2 @@
 # Basic Configuration
-
+teleport-to-raid-world-command: "world teleport worlds:" #+ 'raid_world' из конфига рейда

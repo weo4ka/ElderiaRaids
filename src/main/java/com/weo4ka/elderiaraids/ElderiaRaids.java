@@ -33,10 +33,14 @@ public class ElderiaRaids extends JavaPlugin {
                                                             PluginManager.getInstance().getLootMenuManager()), this);
         this.getServer().getPluginManager().registerEvents(new LootMenuListener(
                                                             PluginManager.getInstance().getLootMenuManager(),
-                                                            PluginManager.getInstance().getRaidManager()), this);
+                                                            PluginManager.getInstance().getRaidManager(), this), this);
         this.getServer().getPluginManager().registerEvents(new PlayerRaidListener(
                                                             PluginManager.getInstance().getLootManager(),
                                                             PluginManager.getInstance().getRaidManager()), this);
+        
+        getServer().getScheduler().runTaskTimer(this, () -> {
+            PluginManager.getInstance().getRaidManager().startRaidInData();
+        }, 20L, 20L);
 
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             event.registrar().register(RaidsCommand.createCommand("raids"));

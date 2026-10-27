@@ -12,6 +12,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+import com.weo4ka.elderiaraids.ElderiaRaids;
 import com.weo4ka.elderiaraids.managers.LootMenuManager;
 import com.weo4ka.elderiaraids.managers.PluginManager;
 import com.weo4ka.elderiaraids.managers.RaidManager;
@@ -22,11 +23,12 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 public class LootMenuListener implements Listener{
     private final LootMenuManager manager;
     private final RaidManager raidManager;
+    private final ElderiaRaids plugin;
 
-
-    public LootMenuListener(LootMenuManager manager, RaidManager raidManager) {
+    public LootMenuListener(LootMenuManager manager, RaidManager raidManager, ElderiaRaids plugin) {
         this.manager = manager;
         this.raidManager = raidManager;
+        this.plugin = plugin;
     }
 
     @EventHandler 
@@ -65,6 +67,7 @@ public class LootMenuListener implements Listener{
         }
 
         String buttonKey = manager.getItemConfigKeyBySlot(slot);
+        plugin.getLogger().info("Clicked on slot: " + slot + ". Found button key for this slot: " + buttonKey);
         if (buttonKey != null) {
             switch (buttonKey) {
                 case "exit-raid":

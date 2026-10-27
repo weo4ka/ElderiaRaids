@@ -1,13 +1,15 @@
 package com.weo4ka.elderiaraids.utils;
 
+import java.util.List;
+
 public class LootMenuItem {
     private final String configKey;
     private final String displayName;
-    private final String displayLore;
+    private final List<String> displayLore;
     private final String material;
     private final int slot;
 
-    public LootMenuItem(String configKey, String displayName, String displayLore, String material, int slot) {
+    public LootMenuItem(String configKey, String displayName, List<String> displayLore, String material, int slot) {
         this.configKey = configKey;
         this.displayName = displayName;
         this.displayLore = displayLore;
@@ -23,7 +25,7 @@ public class LootMenuItem {
         return displayName;
     }
 
-    public String getDisplayLore() {
+    public List<String> getDisplayLore() {
         return displayLore;
     }
 

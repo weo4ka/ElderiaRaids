@@ -22,8 +22,8 @@ public class PluginManager {
 
     public void initialize(ElderiaRaids plugin) {
         this.raidManager = new RaidManager(plugin);
-        this.lootManager = new LootManager(plugin, new ArrayList<RaidData>(this.raidManager.getRegisteredBosses().values()));
         this.lootMenuManager = new LootMenuManager(plugin);
+        this.lootManager = new LootManager(plugin, new ArrayList<RaidData>(this.raidManager.getRegisteredBosses().values()), getLootMenuManager());
 
     }
 
