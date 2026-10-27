@@ -14,15 +14,19 @@ import org.bukkit.inventory.ItemStack;
 
 import com.weo4ka.elderiaraids.managers.LootMenuManager;
 import com.weo4ka.elderiaraids.managers.PluginManager;
+import com.weo4ka.elderiaraids.managers.RaidManager;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public class LootMenuListener implements Listener{
     private final LootMenuManager manager;
+    private final RaidManager raidManager;
 
-    public LootMenuListener(LootMenuManager manager) {
+
+    public LootMenuListener(LootMenuManager manager, RaidManager raidManager) {
         this.manager = manager;
+        this.raidManager = raidManager;
     }
 
     @EventHandler 
@@ -64,8 +68,9 @@ public class LootMenuListener implements Listener{
         if (buttonKey != null) {
             switch (buttonKey) {
                 case "exit-raid":
-                    player.sendMessage("Left Raid");
+                    player.sendMessage("Вы &cпокинули&f рейд и были перемещены в &6Грейхевен&f.");
                     player.closeInventory();
+                    raidManager.leaveRaid(player.getUniqueId());
                     break;
             }
         }

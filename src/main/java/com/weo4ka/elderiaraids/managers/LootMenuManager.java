@@ -46,7 +46,12 @@ public class LootMenuManager {
         loadMenuConfig();
     }
 
-    private void loadMenuConfig() {
+    public void loadMenuConfig() {
+        this.slotsAmount = 0;
+        this.dropSlots.clear();
+        this.title = "";
+        this.menuItems.clear();
+
         this.slotsAmount = menuConfigFile.getInt("menu.size");
         this.dropSlots = menuConfigFile.getIntegerList("menu.loot-slots");
         this.title = menuConfigFile.getString("menu.title");

@@ -7,8 +7,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import com.weo4ka.elderiaraids.commands.RaidsCommand;
 import com.weo4ka.elderiaraids.listeners.LootMenuListener;
-import com.weo4ka.elderiaraids.listeners.MovedToRaidWorldListener;
-import com.weo4ka.elderiaraids.listeners.PlayerLeftListener;
+import com.weo4ka.elderiaraids.listeners.PlayerRaidListener;
 import com.weo4ka.elderiaraids.listeners.RaidBossEventsListener;
 import com.weo4ka.elderiaraids.managers.PluginManager;
 import com.weo4ka.elderiaraids.utils.RaidData;
@@ -28,14 +27,16 @@ public class ElderiaRaids extends JavaPlugin {
         PluginManager.getInstance().initialize(this);
 
         // Register listeners
-        this.getServer().getPluginManager().registerEvents(new MovedToRaidWorldListener(PluginManager.getInstance().getRaidManager()), this);
         this.getServer().getPluginManager().registerEvents(new RaidBossEventsListener(
                                                             PluginManager.getInstance().getRaidManager(), 
                                                             PluginManager.getInstance().getLootManager(), 
-                                                            PluginManager.getInstance().getLootMenuManager(), 
-                                                            PluginManager.getInstance().getRaidDamageManager()), this);
-        this.getServer().getPluginManager().registerEvents(new LootMenuListener(PluginManager.getInstance().getLootMenuManager()), this);
-        this.getServer().getPluginManager().registerEvents(new PlayerLeftListener(PluginManager.getInstance().getLootManager()), this);
+                                                            PluginManager.getInstance().getLootMenuManager()), this);
+        this.getServer().getPluginManager().registerEvents(new LootMenuListener(
+                                                            PluginManager.getInstance().getLootMenuManager(),
+                                                            PluginManager.getInstance().getRaidManager()), this);
+        this.getServer().getPluginManager().registerEvents(new PlayerRaidListener(
+                                                            PluginManager.getInstance().getLootManager(),
+                                                            PluginManager.getInstance().getRaidManager()), this);
 
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             event.registrar().register(RaidsCommand.createCommand("raids"));
@@ -48,7 +49,5 @@ public class ElderiaRaids extends JavaPlugin {
     public void onDisable() {
         getLogger().info(getName() + " has been disabled!");
     }
-
-    
     
 }

@@ -24,7 +24,6 @@ import com.weo4ka.elderiaraids.ElderiaRaids;
 import com.weo4ka.elderiaraids.utils.LootItemData;
 import com.weo4ka.elderiaraids.utils.RaidData;
 
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public class LootManager {
@@ -59,7 +58,7 @@ public class LootManager {
         }
         if (!dbFile.exists()) {
             try {
-                dbFile.createNewFile(); // Просто создаем пустой файл на диске
+                dbFile.createNewFile();
             } catch (IOException e) {
                 plugin.getLogger().severe("Failed creating loot-items-db.yml file!");
                 e.printStackTrace();
@@ -81,7 +80,7 @@ public class LootManager {
         loadLootConfig(bosses);
     }
 
-    private void loadLootConfig(List<RaidData> bosses) {
+    public void loadLootConfig(List<RaidData> bosses) {
         pool.clear();
         damageCategoryToMinDamage.clear();
         damageCategoryToSlotAmount.clear();

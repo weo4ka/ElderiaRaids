@@ -12,7 +12,6 @@ public class PluginManager {
     private RaidManager raidManager;
     private LootManager lootManager;
     private LootMenuManager lootMenuManager;
-    private RaidDamageManager raidDamageManager;
 
     public static PluginManager getInstance() {
         if (instance == null) {
@@ -25,12 +24,10 @@ public class PluginManager {
         this.raidManager = new RaidManager(plugin);
         this.lootManager = new LootManager(plugin, new ArrayList<RaidData>(this.raidManager.getRegisteredBosses().values()));
         this.lootMenuManager = new LootMenuManager(plugin);
-        this.raidDamageManager = new RaidDamageManager();
 
     }
 
     public RaidManager getRaidManager() { return raidManager; }
     public LootManager getLootManager() { return lootManager; }
     public LootMenuManager getLootMenuManager() { return lootMenuManager; }
-    public RaidDamageManager getRaidDamageManager() { return raidDamageManager; }
 }
